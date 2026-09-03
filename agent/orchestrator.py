@@ -14,12 +14,12 @@ final answer. That live trace IS the demo — lean on it.
 """
 
 from __future__ import annotations
-import os
 import json
 from typing import AsyncGenerator, Any
-from anthropic import AsyncAnthropic
 
 from agent.tools import binance_market
+from agent.tools import news_sentiment
+from agent.llm_client import call_llm
 from agent.decision_engine import synthesize_report
 
 MAX_STEPS = 6
@@ -46,6 +46,10 @@ TOOLS = {
         "fn": binance_market.get_recent_liquidations,
         "description": "Get recent liquidation activity. Call this only if OI is unwinding fast AND funding rate is elevated — that combination suggests an active squeeze worth confirming.",
     },
+    "get_news_sentiment": {
+        "fn": news_sentiment.get_news_sentiment,
+        "description": "Fetch recent crypto news headlines and get an LLM-analyzed sentiment read (bullish/bearish/neutral) plus the headlines themselves. Call this when on-chain/derivatives data alone doesn't explain a move, or when you want external confirmation that a price move lines up with real news rather than being purely mechanical (leverage-driven).",
+    },
 }
 
 SYSTEM_PROMPT = """You are the decision core of an autonomous crypto market investigation agent.
@@ -69,6 +73,7 @@ How to reason through an investigation:
 - Only escalate to get_derivatives_snapshot if get_volume_baseline confirmed an anomaly. Volume without confirmation isn't worth chasing into derivatives data.
 - If derivatives data shows an elevated |funding_rate| (roughly >0.0005 in either direction), call get_oi_history to see whether positions are building or unwinding — this is what separates "leverage building up, could reverse later" from "squeeze happening right now."
 - Only call get_recent_liquidations if OI is unwinding fast alongside elevated funding — that's the specific signature of an active squeeze.
+- Call get_news_sentiment when the on-chain/derivatives evidence doesn't fully explain the move, or to check whether a leverage-driven move (squeeze) is ALSO backed by real news, versus being a purely mechanical/technical move with no fundamental story behind it. This is good confirming evidence but shouldn't be your first call — check price/volume/derivatives first.
 - Conclude as soon as you have enough evidence. A typical investigation is 2-4 tool calls; don't call tools just to call them.
 """
 
@@ -78,7 +83,6 @@ async def investigate(question: str, symbol: str = "BTCUSDT") -> AsyncGenerator[
     Runs the investigation loop, yielding one step dict at a time.
     Final yielded item has type "report" and contains the synthesized conclusion.
     """
-    client = AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
     evidence: list[dict[str, Any]] = []
     called_tools: list[str] = []
 
@@ -97,13 +101,7 @@ async def investigate(question: str, symbol: str = "BTCUSDT") -> AsyncGenerator[
             "What's your next move?"
         )
 
-        response = await client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=300,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_msg}],
-        )
-        raw = response.content[0].text.strip()
+        raw = await call_llm(SYSTEM_PROMPT, user_msg, max_tokens=300)
         raw = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
 
         try:
@@ -145,10 +143,10 @@ async def investigate(question: str, symbol: str = "BTCUSDT") -> AsyncGenerator[
                 "type": "thought",
                 "thought": decision.get("thought", "Concluding investigation."),
             }
-            report = await synthesize_report(question, symbol, evidence, client)
+            report = await synthesize_report(question, symbol, evidence)
             yield {"step": step_num + 1, "type": "report", "report": report}
             return
 
     # Hit MAX_STEPS without concluding — force a conclusion with whatever we have
-    report = await synthesize_report(question, symbol, evidence, client)
+    report = await synthesize_report(question, symbol, evidence)
     yield {"step": MAX_STEPS + 1, "type": "report", "report": report}

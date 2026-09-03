@@ -104,8 +104,12 @@ git clone <your-repo-url>
 cd ai-crypto-intelligence-os
 pip install -r requirements.txt
 cp .env.example .env
-# add your ANTHROPIC_API_KEY to .env
 ```
+
+Then add a free Groq API key to `.env`:
+1. Go to [console.groq.com](https://console.groq.com), sign up (no credit card needed)
+2. Create an API key
+3. Paste it into `.env` as `GROQ_API_KEY=...`
 
 ## Usage
 
@@ -157,15 +161,28 @@ tool-selection prompt now encodes this reasoning chain explicitly, and the
 decision engine's synthesis prompt weighs evidence accordingly instead of
 just reading raw numbers.
 
-## Known limitations (as of Day 2)
+**Day 3 —** Swapped the LLM provider from Anthropic to Groq (free tier,
+`llama-3.3-70b-versatile`) behind a small `agent/llm_client.py` abstraction —
+switching providers now only touches one file. Added a news/sentiment tool
+(`get_news_sentiment`) using free public RSS feeds (CoinDesk, CoinTelegraph)
+for headlines, no API key needed, with the LLM classifying sentiment.
+RSS-parsing and keyword-filtering logic are pure functions with full unit
+test coverage. Decision engine now weighs sentiment against the derivatives
+evidence — agreement strengthens confidence, disagreement flags a purely
+mechanical/leverage-driven move as riskier.
+
+## Known limitations (as of Day 3)
 
 - **Liquidation data is a placeholder.** Binance doesn't expose a clean REST
   endpoint for this — real implementation needs a `forceOrder` websocket
   listener. Stubbed so the orchestrator's branching logic still runs
   end-to-end; wiring the real feed is a stretch goal.
-- **News/sentiment and on-chain sources are not yet integrated** — planned
-  for Day 3.
+- **On-chain/whale tracking is not yet integrated** — cut from scope unless
+  time allows; not required for the core investigation loop to work.
 - **No frontend yet** — CLI only so far, planned for Day 4.
+- **News sentiment quality depends on feed relevance** — if RSS feeds return
+  mostly unrelated headlines, the tool returns "neutral" honestly rather
+  than forcing a read, by design.
 
 ## License
 
