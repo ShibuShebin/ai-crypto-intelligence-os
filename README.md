@@ -141,15 +141,31 @@ pip install pytest pytest-asyncio
 pytest tests/ -v
 ```
 
-## Known limitations (Day 1 build)
+## Build log
+
+**Day 1 —** Orchestrator loop, spot + derivatives tools, decision engine, CLI.
+Loop logic tested with mocks.
+
+**Day 2 —** Replaced the crude "big price move = anomaly" guess with a real
+7-day volume baseline comparison (`get_volume_baseline`), and added open
+interest trend tracking (`get_oi_history`) so the agent can tell the
+difference between leverage *building up* (a setup) and leverage *unwinding*
+(an active squeeze) — same funding rate, very different meaning. Both new
+calculations are pure functions with full unit test coverage (edge cases
+included, e.g. the exact anomaly threshold boundary). Orchestrator's
+tool-selection prompt now encodes this reasoning chain explicitly, and the
+decision engine's synthesis prompt weighs evidence accordingly instead of
+just reading raw numbers.
+
+## Known limitations (as of Day 2)
 
 - **Liquidation data is a placeholder.** Binance doesn't expose a clean REST
   endpoint for this — real implementation needs a `forceOrder` websocket
   listener. Stubbed so the orchestrator's branching logic still runs
   end-to-end; wiring the real feed is a stretch goal.
 - **News/sentiment and on-chain sources are not yet integrated** — planned
-  for later in the build (see roadmap in `docs/architecture.md`).
-- **No frontend yet** — CLI only so far.
+  for Day 3.
+- **No frontend yet** — CLI only so far, planned for Day 4.
 
 ## License
 

@@ -30,13 +30,21 @@ TOOLS = {
         "fn": binance_market.get_spot_snapshot,
         "description": "Get 24h price, price-change %, and volume for a symbol (e.g. BTCUSDT). Always call this first.",
     },
+    "get_volume_baseline": {
+        "fn": binance_market.get_volume_baseline,
+        "description": "Compare current 24h volume against the symbol's own 7-day average. Returns pct_above_baseline and is_anomaly. Call this after spot data if the price move looks notable — it tells you if volume is ACTUALLY unusual, not just guessed from price range.",
+    },
     "get_derivatives_snapshot": {
         "fn": binance_market.get_derivatives_snapshot,
-        "description": "Get open interest, funding rate, and mark price. Call this if spot data shows an unusual move — it reveals whether leverage/futures are driving it.",
+        "description": "Get current open interest, funding rate, and mark price. Call this if volume is confirmed anomalous — it reveals whether leverage/futures are driving the move. A high positive funding rate means longs are paying shorts (crowded long trade); a high negative rate means the reverse.",
+    },
+    "get_oi_history": {
+        "fn": binance_market.get_oi_history,
+        "description": "Get the recent trend in open interest (building/unwinding/flat over the last several hours). Call this after get_derivatives_snapshot to distinguish 'new leverage piling in' (OI building) from 'a squeeze already unwinding' (OI dropping fast) — the same funding rate can mean very different things depending on this.",
     },
     "get_recent_liquidations": {
         "fn": binance_market.get_recent_liquidations,
-        "description": "Get recent liquidation activity. Call this if derivatives data suggests a squeeze (high funding rate + volume anomaly).",
+        "description": "Get recent liquidation activity. Call this only if OI is unwinding fast AND funding rate is elevated — that combination suggests an active squeeze worth confirming.",
     },
 }
 
@@ -54,11 +62,14 @@ Respond ONLY with JSON, no other text, no markdown fences:
   "tool_args": {"symbol": "BTCUSDT"}
 }
 
-Rules:
+How to reason through an investigation:
 - Always call get_spot_snapshot first if it hasn't been called yet.
-- Only call get_derivatives_snapshot if the spot data shows something worth explaining (notable price move and/or volume anomaly).
-- Only call get_recent_liquidations if derivatives data suggests leverage is involved (elevated funding rate).
-- Conclude as soon as you have enough evidence — don't call tools just to call them. A typical investigation is 2-4 tool calls.
+- If the price move is small (<2%) and nothing looks unusual, conclude early — don't over-investigate a quiet market.
+- If the price move is notable, call get_volume_baseline to check whether volume is ACTUALLY anomalous (is_anomaly: true), not just assumed from price alone.
+- Only escalate to get_derivatives_snapshot if get_volume_baseline confirmed an anomaly. Volume without confirmation isn't worth chasing into derivatives data.
+- If derivatives data shows an elevated |funding_rate| (roughly >0.0005 in either direction), call get_oi_history to see whether positions are building or unwinding — this is what separates "leverage building up, could reverse later" from "squeeze happening right now."
+- Only call get_recent_liquidations if OI is unwinding fast alongside elevated funding — that's the specific signature of an active squeeze.
+- Conclude as soon as you have enough evidence. A typical investigation is 2-4 tool calls; don't call tools just to call them.
 """
 
 
