@@ -5,7 +5,7 @@ care which one it is.
 
 Default: Groq (free tier, fast, OpenAI-compatible API — get a key at
 console.groq.com, no credit card required). Model used is
-llama-3.3-70b-versatile, which is strong enough at following the strict
+openai/gpt-oss-120b, which is strong enough at following the strict
 JSON-only instructions this project relies on.
 
 If you later want to switch to Anthropic (e.g. once you have credits again),
@@ -38,7 +38,7 @@ async def _call_groq(system_prompt: str, user_message: str, max_tokens: int) -> 
 
     client = AsyncGroq(api_key=os.environ.get("GROQ_API_KEY"))
     response = await client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         max_tokens=max_tokens,
         temperature=0.3,  # lower temp — we want consistent, parseable JSON, not creativity
         messages=[
