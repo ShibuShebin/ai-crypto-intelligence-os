@@ -80,21 +80,39 @@ approval → Binance order placement. Deliberately out of scope for this
 submission — a read-only intelligence agent is a safer, more focused demo
 than a bot that also trades.
 
+## Deploy
+
+This repo deploys as-is to Render (config included: `render.yaml`):
+
+1. Push to GitHub (if you haven't already)
+2. Go to [render.com](https://render.com) → New → Web Service → connect your repo
+3. Render auto-detects `render.yaml`. Add your `GROQ_API_KEY` in the environment variables section (it's marked `sync: false` so Render prompts you for it rather than committing it)
+4. Deploy — you'll get a public URL like `https://ai-crypto-intelligence-os.onrender.com`
+
+A `Procfile` and `runtime.txt` are also included for Railway or other buildpack-based hosts.
+
+**Note:** free-tier Render instances spin down after inactivity and take ~30-60s to wake on the first request — mention this if demoing from a cold deploy, or just hit the URL a minute before you go live.
+
 ## Project structure
 
 ```
 ai-crypto-intelligence-os/
 ├── agent/
-│   ├── orchestrator.py      # the investigation loop
-│   ├── decision_engine.py   # evidence -> verdict synthesis
+│   ├── api.py                # FastAPI server (SSE streaming + serves frontend)
+│   ├── orchestrator.py       # the investigation loop
+│   ├── decision_engine.py    # evidence -> verdict synthesis
+│   ├── llm_client.py         # provider-agnostic LLM wrapper (Groq default)
 │   └── tools/
-│       └── binance_market.py
-├── tests/
-│   └── test_orchestrator.py # loop logic tested with mocks
-├── run.py                   # CLI entrypoint
-├── frontend/                # live trace + report UI (in progress)
-└── docs/
-    └── architecture.md
+│       ├── binance_market.py
+│       └── news_sentiment.py
+├── frontend/                 # no-build HTML/CSS/JS live trace dashboard
+├── tests/                    # 21 tests, mocked network/LLM calls
+├── docs/
+│   ├── architecture.md       # detailed design rationale
+│   └── demo.md                # demo script + recording guide
+├── run.py                    # CLI entrypoint
+├── render.yaml / Procfile    # deploy configs
+└── requirements.txt
 ```
 
 ## Setup
@@ -113,10 +131,17 @@ Then add a free Groq API key to `.env`:
 
 ## Usage
 
+**CLI:**
 ```bash
 python run.py "Why is BTC moving up?"
 python run.py "Is ETH showing signs of a short squeeze?" --symbol ETHUSDT
 ```
+
+**Web dashboard:**
+```bash
+uvicorn agent.api:app --reload --port 8000
+```
+Then open **http://localhost:8000** — type a question, watch the agent's reasoning trace stream in live, ending in a verdict card (bullish/bearish/neutral, confidence, evidence, risk note).
 
 You'll see the agent's reasoning trace print live, step by step, ending in a
 structured report:
@@ -171,7 +196,20 @@ test coverage. Decision engine now weighs sentiment against the derivatives
 evidence — agreement strengthens confidence, disagreement flags a purely
 mechanical/leverage-driven move as riskier.
 
-## Known limitations (as of Day 3)
+**Day 4 —** Built the web dashboard: `agent/api.py` (FastAPI) streams the
+investigation as Server-Sent Events, and `frontend/` (plain HTML/CSS/JS, no
+build step) renders the live reasoning trace as a connected case-log, then
+a verdict card. Verified end-to-end with a mocked SSE stream (5 events:
+thought → observation → thought → report → done) since this sandbox has no
+live network access to test the real browser experience — you'll do that
+final check locally.
+
+**Day 5 —** Deploy configs (`render.yaml`, `Procfile`, `runtime.txt`),
+detailed architecture writeup (`docs/architecture.md`) explaining the
+reasoning behind the tool chain and evidence-weighing rules, and a demo
+script (`docs/demo.md`) with a recording guide for a backup video.
+
+## Known limitations (as of Day 5)
 
 - **Liquidation data is a placeholder.** Binance doesn't expose a clean REST
   endpoint for this — real implementation needs a `forceOrder` websocket

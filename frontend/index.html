@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Crypto Intelligence OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="panel">
+    <header class="panel__bar">
+      <h1 class="panel__title">AI Crypto Intelligence OS</h1>
+      <div class="symbol-select" id="symbolSelect">
+        <button class="symbol-btn is-active" data-symbol="BTCUSDT">BTC</button>
+        <button class="symbol-btn" data-symbol="ETHUSDT">ETH</button>
+        <button class="symbol-btn" data-symbol="SOLUSDT">SOL</button>
+      </div>
+    </header>
+
+    <form class="query-row" id="queryForm">
+      <span class="query-row__prompt">&gt;</span>
+      <input
+        type="text"
+        id="questionInput"
+        class="query-row__input"
+        placeholder="Why is BTC moving up?"
+        autocomplete="off"
+      />
+      <button type="submit" class="query-row__submit" id="submitBtn">Investigate</button>
+    </form>
+
+    <section class="log" id="log" aria-live="polite">
+      <p class="log__empty" id="logEmpty">
+        Ask a question above. The agent will decide for itself which data to check —
+        watch the reasoning trace build in real time.
+      </p>
+    </section>
+
+    <section class="report" id="report" hidden>
+      <div class="report__head">
+        <span class="report__label">Verdict</span>
+        <span class="report__badge" id="reportBadge">—</span>
+        <span class="report__confidence" id="reportConfidence"></span>
+      </div>
+      <p class="report__summary" id="reportSummary"></p>
+      <div class="report__evidence" id="reportEvidence"></div>
+      <p class="report__risk" id="reportRisk"></p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
