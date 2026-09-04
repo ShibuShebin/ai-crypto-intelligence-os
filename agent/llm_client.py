@@ -38,7 +38,7 @@ async def _call_groq(system_prompt: str, user_message: str, max_tokens: int) -> 
 
     client = AsyncGroq(api_key=os.environ.get("GROQ_API_KEY"))
     response = await client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         max_tokens=max_tokens,
         temperature=0.3,  # lower temp — we want consistent, parseable JSON, not creativity
         messages=[
